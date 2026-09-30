@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - SCM Developer</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 420px;
+            margin: 80px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input {
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #111;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #333;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .login-link {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .login-link a {
+            color: #111;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Create Account</h1>
+
+    <p class="subtitle">
+        Create your SCM Developer account
+    </p>
+
+    <form id="registerForm">
+
+        <input
+            type="text"
+            id="name"
+            placeholder="Full Name"
+            required
+        >
+
+        <input
+            type="email"
+            id="email"
+            placeholder="Email"
+            required
+        >
+
+        <input
+            type="password"
+            id="password"
+            placeholder="Password (minimum 8 characters)"
+            minlength="8"
+            required
+        >
+
+        <button type="submit" id="registerButton">
+            Create Account
+        </button>
+
+    </form>
+
+    <p id="message"></p>
+
+    <p class="login-link">
+        Already have an account?
+        <a href="login.html">Login</a>
+    </p>
+
+</div>
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000";
+
+const registerForm = document.getElementById("registerForm");
+const registerButton = document.getElementById("registerButton");
+const message = document.getElementById("message");
+
+registerForm.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    message.innerText = "";
+    registerButton.disabled = true;
+    registerButton.innerText = "Creating Account...";
+
+    try {
+
+        const response = await fetch(`${API_URL}/auth/signup`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        console.log("Signup response:", data);
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                data.message ||
+                "Registration failed"
+            );
+        }
+
+        message.innerText =
+            "Registration successful! Redirecting to login...";
+
+        message.style.color = "green";
+
+        setTimeout(() => {
+            window.location.href = "login.html";
+        }, 1000);
+
+    } catch (error) {
+
+        console.error("Signup error:", error);
+
+        message.innerText = error.message;
+        message.style.color = "red";
+
+        registerButton.disabled = false;
+        registerButton.innerText = "Create Account";
+    }
+
+});
+
+</script>
+
+</body>
+</html>
