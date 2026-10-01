@@ -88,16 +88,68 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
         }
 
         // Store JWT
-        localStorage.setItem("access_token", data.data.access_token);
+        const token = data.data.access_token;
 
-        document.getElementById("message").innerText =
-            "Login successful! Redirecting...";
+        localStorage.setItem("access_token", token);
 
-        setTimeout(() => {
-            window.location.href = "index.html";
-        }, 500);
+        const payload = JSON.parse(
+            atob(
+                token.split(".")[1]
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/")
+            )
+        );
+
+        const userId = payload.user_id;
+
+        localStorage.setItem("user_id", userId);
+
+        // Check whether the profile is already complete
+        try {
+
+            const profileResponse = await fetch(
+                `${API_URL}/auth/profile?user_id=${encodeURIComponent(userId)}`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                }
+            );
+
+            const profileResult = await profileResponse.json();
+
+            if (!profileResponse.ok) {
+                throw new Error(
+                    profileResult.detail ||
+                    profileResult.message ||
+                    "Unable to check profile."
+                );
+            }
+
+            const profile = profileResult.data || profileResult;
+
+            const profileComplete =
+                Boolean(profile.first_name) &&
+                Boolean(profile.last_name) &&
+                Boolean(profile.email) &&
+                Boolean(profile.phone_number);
+
+            if (profileComplete) {
+                window.location.href = "index.html";
+            } else {
+                window.location.href = "onboarding.html";
+            }
+
+        } catch (error) {
+
+            console.error("Profile check failed:", error);
+
+            // If profile cannot be verified, send user to onboarding
+            window.location.href = "onboarding.html";
+        }
 
     } catch (error) {
+
         document.getElementById("message").innerText =
             error.message;
     }

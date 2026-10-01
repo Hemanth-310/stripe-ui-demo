@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Profile - SCM Developer API</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: white;
+            border-radius: 14px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .phone-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .country-code {
+            width: 110px;
+        }
+
+        .phone-number {
+            flex: 1;
+        }
+
+        .required {
+            color: #dc2626;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 13px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error {
+            display: none;
+            margin-bottom: 18px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .success {
+            display: none;
+            margin-bottom: 18px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .photo-note {
+            margin-top: 20px;
+            color: #777;
+            font-size: 13px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <h1>Complete your profile</h1>
+
+    <div class="subtitle">
+        Please provide your details before continuing to the Developer API plans.
+    </div>
+
+    <div id="errorMessage" class="error"></div>
+    <div id="successMessage" class="success"></div>
+
+    <form id="profileForm">
+
+        <div class="field">
+            <label for="firstName">
+                First Name <span class="required">*</span>
+            </label>
+
+            <input
+                type="text"
+                id="firstName"
+                required
+                autocomplete="given-name"
+            >
+        </div>
+
+        <div class="field">
+            <label for="lastName">
+                Last Name <span class="required">*</span>
+            </label>
+
+            <input
+                type="text"
+                id="lastName"
+                required
+                autocomplete="family-name"
+            >
+        </div>
+
+        <div class="field">
+            <label for="email">
+                Email Address <span class="required">*</span>
+            </label>
+
+            <input
+                type="email"
+                id="email"
+                required
+                autocomplete="email"
+            >
+        </div>
+
+        <div class="field">
+            <label>
+                Phone Number <span class="required">*</span>
+            </label>
+
+            <div class="phone-row">
+
+                <input
+                    type="text"
+                    id="countryCode"
+                    class="country-code"
+                    value="+91"
+                    required
+                    placeholder="+91"
+                >
+
+                <input
+                    type="tel"
+                    id="phoneNumber"
+                    class="phone-number"
+                    required
+                    autocomplete="tel"
+                    placeholder="9876543210"
+                >
+
+            </div>
+        </div>
+
+        <button type="submit" id="continueButton">
+            Continue
+        </button>
+
+    </form>
+
+    <div class="photo-note">
+        Profile photo is optional and can be added later.
+    </div>
+
+</div>
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000";
+
+const token = localStorage.getItem("access_token");
+const userId = localStorage.getItem("user_id");
+
+if (!token || !userId) {
+    window.location.href = "login.html";
+}
+
+const form = document.getElementById("profileForm");
+const continueButton = document.getElementById("continueButton");
+
+const errorMessage = document.getElementById("errorMessage");
+const successMessage = document.getElementById("successMessage");
+
+function showError(message) {
+    errorMessage.textContent = message;
+    errorMessage.style.display = "block";
+    successMessage.style.display = "none";
+}
+
+function showSuccess(message) {
+    successMessage.textContent = message;
+    successMessage.style.display = "block";
+    errorMessage.style.display = "none";
+}
+
+async function loadExistingProfile() {
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/auth/profile?user_id=${encodeURIComponent(userId)}`,
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail ||
+                result.message ||
+                "Unable to load profile."
+            );
+        }
+
+        const profile = result.data || result;
+
+        if (profile.first_name) {
+            document.getElementById("firstName").value =
+                profile.first_name;
+        }
+
+        if (profile.last_name) {
+            document.getElementById("lastName").value =
+                profile.last_name;
+        }
+
+        if (profile.email) {
+            document.getElementById("email").value =
+                profile.email;
+        }
+
+        if (profile.country_code) {
+            document.getElementById("countryCode").value =
+                profile.country_code;
+        }
+
+        if (profile.phone_number) {
+            document.getElementById("phoneNumber").value =
+                profile.phone_number;
+        }
+
+    } catch (error) {
+
+        console.error("Profile load error:", error);
+
+        showError(
+            error.message || "Unable to load your profile."
+        );
+    }
+}
+
+form.addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    const firstName =
+        document.getElementById("firstName").value.trim();
+
+    const lastName =
+        document.getElementById("lastName").value.trim();
+
+    const email =
+        document.getElementById("email").value.trim();
+
+    const countryCode =
+        document.getElementById("countryCode").value.trim();
+
+    const phoneNumber =
+        document.getElementById("phoneNumber").value.trim();
+
+    if (!firstName || !lastName || !email ||
+        !countryCode || !phoneNumber) {
+
+        showError("Please complete all required fields.");
+        return;
+    }
+
+    continueButton.disabled = true;
+    continueButton.textContent = "Saving...";
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/auth/profile?user_id=${encodeURIComponent(userId)}`,
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+
+                body: JSON.stringify({
+                    first_name: firstName,
+                    last_name: lastName,
+                    email: email,
+                    phone_number: phoneNumber,
+                    country_code: countryCode
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail ||
+                result.message ||
+                "Unable to update profile."
+            );
+        }
+
+        showSuccess("Profile updated successfully.");
+
+        setTimeout(() => {
+            window.location.href = "index.html";
+        }, 500);
+
+    } catch (error) {
+
+        console.error("Profile update error:", error);
+
+        showError(
+            error.message || "Unable to update your profile."
+        );
+
+        continueButton.disabled = false;
+        continueButton.textContent = "Continue";
+    }
+
+});
+
+loadExistingProfile();
+
+</script>
+
+</body>
+</html>
